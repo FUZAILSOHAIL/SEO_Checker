@@ -1,0 +1,1237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SEO Analyzer — Free Website SEO Check</title>
+  <meta name="description" content="Free SEO checker. Analyze any URL for meta tags, page quality, site structure, server config, and structured data.">
+  <style>
+    /* ── Reset & Variables ───────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:         #0b1120;
+      --bg2:        #131d30;
+      --card:       #1a2640;
+      --card-hover: #1f2e4a;
+      --border:     #243352;
+      --text:       #e2e8f0;
+      --muted:      #8899bb;
+      --accent:     #4f8ef7;
+      --good:       #22c55e;
+      --warn:       #f59e0b;
+      --error:      #ef4444;
+      --info:       #60a5fa;
+      --radius:     12px;
+      --shadow:     0 4px 24px rgba(0,0,0,.4);
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+
+    /* ── Header ──────────────────────────────────────────────────────── */
+    header {
+      background: linear-gradient(135deg, #0d1b35 0%, #0f2a5e 50%, #0d1b35 100%);
+      padding: 56px 20px 52px;
+      text-align: center;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .logo {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 20px;
+      text-decoration: none;
+    }
+
+    .logo-icon {
+      width: 38px; height: 38px;
+      background: linear-gradient(135deg, var(--accent), #7c5ce4);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px;
+    }
+
+    .logo-text { font-size: 1.4rem; font-weight: 700; color: var(--text); }
+
+    header h1 {
+      font-size: clamp(1.6rem, 4vw, 2.8rem);
+      font-weight: 800;
+      background: linear-gradient(135deg, #e2e8f0, var(--accent));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 12px;
+    }
+
+    header p {
+      color: var(--muted);
+      font-size: 1.05rem;
+      max-width: 560px;
+      margin: 0 auto 32px;
+    }
+
+    /* ── URL Input ───────────────────────────────────────────────────── */
+    .search-box {
+      display: flex;
+      max-width: 680px;
+      margin: 0 auto;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 50px;
+      overflow: hidden;
+      box-shadow: var(--shadow), 0 0 0 1px rgba(79,142,247,.15);
+      transition: box-shadow .2s;
+    }
+
+    .search-box:focus-within {
+      box-shadow: var(--shadow), 0 0 0 3px rgba(79,142,247,.35);
+    }
+
+    #url-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      padding: 16px 22px;
+      font-size: 1rem;
+      color: var(--text);
+    }
+
+    #url-input::placeholder { color: var(--muted); }
+
+    #analyze-btn {
+      padding: 14px 28px;
+      background: linear-gradient(135deg, var(--accent), #7c5ce4);
+      color: #fff;
+      border: none;
+      font-size: .95rem;
+      font-weight: 600;
+      cursor: pointer;
+      border-radius: 0 50px 50px 0;
+      transition: opacity .2s, transform .1s;
+      white-space: nowrap;
+    }
+
+    #analyze-btn:hover  { opacity: .9; }
+    #analyze-btn:active { transform: scale(.97); }
+    #analyze-btn:disabled { opacity: .5; cursor: not-allowed; }
+
+    .error-msg {
+      color: var(--error);
+      font-size: .875rem;
+      margin-top: 12px;
+      text-align: center;
+      min-height: 20px;
+    }
+
+    /* ── Main container ──────────────────────────────────────────────── */
+    main { max-width: 1100px; margin: 0 auto; padding: 40px 20px 80px; }
+
+    /* ── Loading state ───────────────────────────────────────────────── */
+    #loading { display: none; text-align: center; padding: 60px 20px; }
+
+    .spinner {
+      width: 56px; height: 56px;
+      border: 4px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin .8s linear infinite;
+      margin: 0 auto 20px;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .loading-url {
+      color: var(--muted);
+      font-size: .9rem;
+      margin-top: 8px;
+      word-break: break-all;
+    }
+
+    .loading-steps {
+      list-style: none;
+      margin-top: 24px;
+      display: inline-flex;
+      flex-direction: column;
+      gap: 6px;
+      text-align: left;
+    }
+
+    .loading-steps li {
+      font-size: .875rem;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .step-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--border);
+    }
+
+    .step-dot.active  { background: var(--accent); animation: pulse 1s infinite; }
+    .step-dot.done    { background: var(--good); }
+
+    @keyframes pulse {
+      0%,100% { opacity: 1; } 50% { opacity: .4; }
+    }
+
+    /* ── Results ─────────────────────────────────────────────────────── */
+    #results { display: none; }
+
+    /* Overall score card */
+    .overall-card {
+      background: linear-gradient(135deg, var(--bg2), var(--card));
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 36px;
+      margin-bottom: 28px;
+      display: flex;
+      align-items: center;
+      gap: 36px;
+      flex-wrap: wrap;
+      box-shadow: var(--shadow);
+    }
+
+    .score-gauge-wrap {
+      position: relative;
+      width: 140px; height: 140px;
+      flex-shrink: 0;
+    }
+
+    .score-gauge-wrap svg { transform: rotate(-90deg); }
+
+    .score-center {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .score-number {
+      font-size: 2.6rem;
+      font-weight: 800;
+      line-height: 1;
+    }
+
+    .score-label {
+      font-size: .7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    .overall-info h2 {
+      font-size: 1.4rem;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .overall-info .check-url {
+      color: var(--accent);
+      word-break: break-all;
+      font-size: .875rem;
+      margin-bottom: 12px;
+    }
+
+    .overall-info .page-title {
+      color: var(--muted);
+      font-size: .875rem;
+      font-style: italic;
+    }
+
+    .score-badge {
+      display: inline-block;
+      padding: 3px 12px;
+      border-radius: 20px;
+      font-size: .8rem;
+      font-weight: 600;
+    }
+
+    .badge-good    { background: rgba(34,197,94,.15);  color: var(--good);  }
+    .badge-warning { background: rgba(245,158,11,.15); color: var(--warn);  }
+    .badge-error   { background: rgba(239,68,68,.15);  color: var(--error); }
+
+    /* Category cards grid */
+    .categories-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+      gap: 16px;
+      margin-bottom: 36px;
+    }
+
+    .cat-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      cursor: pointer;
+      transition: background .15s, border-color .15s, transform .1s;
+    }
+
+    .cat-card:hover  { background: var(--card-hover); }
+    .cat-card.active { border-color: var(--accent); }
+    .cat-card:active { transform: scale(.97); }
+
+    .cat-name { font-size: .8rem; color: var(--muted); margin-bottom: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; }
+
+    .cat-score-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+
+    .cat-score-num { font-size: 1.8rem; font-weight: 800; }
+
+    .cat-bar-bg {
+      width: 100%;
+      height: 5px;
+      background: var(--border);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .cat-bar-fill {
+      height: 100%;
+      border-radius: 3px;
+      transition: width 1s ease;
+    }
+
+    /* Detailed checks panel */
+    .details-panel {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+
+    .details-tabs {
+      display: flex;
+      overflow-x: auto;
+      border-bottom: 1px solid var(--border);
+      scrollbar-width: none;
+    }
+
+    .details-tabs::-webkit-scrollbar { display: none; }
+
+    .tab-btn {
+      padding: 14px 20px;
+      background: transparent;
+      border: none;
+      color: var(--muted);
+      font-size: .875rem;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      border-bottom: 2px solid transparent;
+      transition: color .15s, border-color .15s;
+    }
+
+    .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .tab-btn:hover:not(.active) { color: var(--text); }
+
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    /* Check rows */
+    .check-list { padding: 8px 0; }
+
+    .check-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      padding: 14px 22px;
+      border-bottom: 1px solid var(--border);
+      transition: background .1s;
+    }
+
+    .check-row:last-child { border-bottom: none; }
+    .check-row:hover { background: rgba(255,255,255,.02); }
+
+    .check-icon {
+      width: 22px; height: 22px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    .icon-good    { background: rgba(34,197,94,.15);  color: var(--good);  }
+    .icon-warning { background: rgba(245,158,11,.15); color: var(--warn);  }
+    .icon-error   { background: rgba(239,68,68,.15);  color: var(--error); }
+    .icon-info    { background: rgba(96,165,250,.15); color: var(--info);  }
+
+    .check-body { flex: 1; min-width: 0; }
+
+    .check-name {
+      font-size: .9rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 2px;
+    }
+
+    .check-description { font-size: .82rem; color: var(--muted); }
+
+    .check-value {
+      font-size: .78rem;
+      color: var(--accent);
+      background: rgba(79,142,247,.1);
+      padding: 1px 8px;
+      border-radius: 4px;
+      display: inline-block;
+      margin-top: 4px;
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      vertical-align: bottom;
+    }
+
+    .check-recommendation {
+      font-size: .8rem;
+      color: var(--warn);
+      margin-top: 6px;
+      padding: 6px 10px;
+      background: rgba(245,158,11,.06);
+      border-left: 2px solid var(--warn);
+      border-radius: 0 4px 4px 0;
+    }
+
+    .check-points {
+      font-size: .75rem;
+      color: var(--muted);
+      white-space: nowrap;
+      padding-top: 3px;
+    }
+
+    /* Priority list */
+    .priority-section {
+      margin-top: 28px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+
+    .priority-header {
+      padding: 18px 22px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .priority-header h3 { font-size: 1rem; font-weight: 700; }
+    .priority-header .count-badge {
+      background: var(--error);
+      color: #fff;
+      font-size: .72rem;
+      font-weight: 700;
+      padding: 1px 8px;
+      border-radius: 10px;
+    }
+
+    .priority-item {
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+      padding: 14px 22px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .priority-item:last-child { border-bottom: none; }
+
+    .priority-num {
+      width: 24px; height: 24px;
+      border-radius: 50%;
+      background: rgba(239,68,68,.15);
+      color: var(--error);
+      font-size: .75rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .priority-category {
+      font-size: .7rem;
+      background: var(--bg2);
+      color: var(--muted);
+      padding: 1px 8px;
+      border-radius: 4px;
+      display: inline-block;
+      margin-bottom: 3px;
+    }
+
+    .priority-name { font-size: .9rem; font-weight: 600; margin-bottom: 2px; }
+    .priority-rec  { font-size: .82rem; color: var(--muted); }
+
+    /* Empty priority */
+    .all-good-banner {
+      padding: 24px;
+      text-align: center;
+      color: var(--good);
+      font-size: .9rem;
+    }
+
+    /* ── AI Insights section ─────────────────────────────────────────── */
+    .ai-section {
+      background: linear-gradient(135deg, #1a1040 0%, #1a2640 100%);
+      border: 1px solid #3d2d6e;
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: var(--shadow), 0 0 0 1px rgba(124,92,228,.15);
+      margin-bottom: 28px;
+    }
+
+    .ai-header {
+      padding: 18px 22px;
+      border-bottom: 1px solid #3d2d6e;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .ai-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: linear-gradient(135deg, #7c5ce4, #4f8ef7);
+      color: #fff;
+      font-size: .72rem;
+      font-weight: 700;
+      padding: 2px 10px;
+      border-radius: 10px;
+      letter-spacing: .04em;
+    }
+
+    .ai-header h3 { font-size: 1rem; font-weight: 700; }
+
+    .ai-body { padding: 20px 22px; }
+
+    .ai-summary {
+      font-size: .93rem;
+      line-height: 1.7;
+      color: var(--text);
+      margin-bottom: 20px;
+      padding: 14px 16px;
+      background: rgba(255,255,255,.03);
+      border-left: 3px solid #7c5ce4;
+      border-radius: 0 8px 8px 0;
+    }
+
+    .ai-content-score {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 20px;
+      font-size: .85rem;
+    }
+
+    .ai-content-score .score-pill {
+      padding: 3px 12px;
+      border-radius: 20px;
+      font-weight: 700;
+      font-size: .8rem;
+    }
+
+    .ai-suggestions-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+
+    @media (max-width: 640px) { .ai-suggestions-grid { grid-template-columns: 1fr; } }
+
+    .ai-suggestion-card {
+      background: rgba(255,255,255,.04);
+      border: 1px solid #3d2d6e;
+      border-radius: 8px;
+      padding: 14px;
+    }
+
+    .ai-suggestion-label {
+      font-size: .7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: #a78bfa;
+      margin-bottom: 6px;
+    }
+
+    .ai-suggestion-text {
+      font-size: .85rem;
+      color: var(--text);
+      line-height: 1.5;
+    }
+
+    .ai-recs-title {
+      font-size: .8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+
+    .ai-rec-item {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(255,255,255,.05);
+    }
+
+    .ai-rec-item:last-child { border-bottom: none; }
+
+    .ai-rec-badge {
+      flex-shrink: 0;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: .7rem;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .impact-high   { background: rgba(239,68,68,.15);  color: var(--error); }
+    .impact-medium { background: rgba(245,158,11,.15); color: var(--warn);  }
+    .impact-low    { background: rgba(96,165,250,.15); color: var(--info);  }
+
+    .ai-rec-area {
+      font-size: .7rem;
+      background: rgba(124,92,228,.15);
+      color: #a78bfa;
+      padding: 2px 8px;
+      border-radius: 4px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .ai-rec-text { font-size: .875rem; color: var(--text); }
+
+    /* Features section */
+    .features {
+      margin-top: 64px;
+      padding-top: 40px;
+      border-top: 1px solid var(--border);
+    }
+
+    .features h2 {
+      text-align: center;
+      font-size: 1.5rem;
+      margin-bottom: 32px;
+      color: var(--text);
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+    }
+
+    .feature-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+    }
+
+    .feature-icon { font-size: 1.8rem; margin-bottom: 12px; }
+    .feature-card h3 { font-size: .95rem; font-weight: 700; margin-bottom: 6px; }
+    .feature-card p  { font-size: .82rem; color: var(--muted); line-height: 1.5; }
+
+    /* Responsive */
+    @media (max-width: 600px) {
+      .overall-card { flex-direction: column; text-align: center; }
+      .check-row { flex-wrap: wrap; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Header ─────────────────────────────────────────────────────────────── -->
+<header>
+  <a class="logo" href="/">
+    <span class="logo-icon">🔍</span>
+    <span class="logo-text">SEO Analyzer</span>
+  </a>
+  <h1>Free SEO Checker</h1>
+  <p>Analyze any URL for meta tags, content quality, site structure, server config and structured data — instantly.</p>
+
+  <div class="search-box">
+    <input id="url-input" type="url" placeholder="https://example.com" autocomplete="off" spellcheck="false">
+    <button id="analyze-btn" onclick="startAnalysis()">Analyze</button>
+  </div>
+  <p class="error-msg" id="error-msg"></p>
+</header>
+
+<!-- ── Main ───────────────────────────────────────────────────────────────── -->
+<main>
+
+  <!-- Loading state -->
+  <div id="loading">
+    <div class="spinner"></div>
+    <div style="font-size:1.05rem;font-weight:600">Analyzing your website…</div>
+    <div class="loading-url" id="loading-url"></div>
+    <ul class="loading-steps">
+      <li><span class="step-dot" id="step-0"></span>Fetching page</li>
+      <li><span class="step-dot" id="step-1"></span>Checking meta information</li>
+      <li><span class="step-dot" id="step-2"></span>Analyzing page quality</li>
+      <li><span class="step-dot" id="step-3"></span>Auditing site structure</li>
+      <li><span class="step-dot" id="step-4"></span>Checking server configuration</li>
+      <li><span class="step-dot" id="step-5"></span>Evaluating external signals</li>
+    </ul>
+  </div>
+
+  <!-- Results -->
+  <div id="results">
+
+    <!-- Overall score -->
+    <div class="overall-card">
+      <div class="score-gauge-wrap">
+        <svg width="140" height="140" viewBox="0 0 140 140">
+          <circle cx="70" cy="70" r="58" fill="none" stroke="var(--border)" stroke-width="10"/>
+          <circle id="score-circle" cx="70" cy="70" r="58" fill="none"
+                  stroke="var(--good)" stroke-width="10"
+                  stroke-linecap="round"
+                  stroke-dasharray="364.4"
+                  stroke-dashoffset="364.4"/>
+        </svg>
+        <div class="score-center">
+          <span class="score-number" id="score-number" style="color:var(--good)">—</span>
+          <span class="score-label">/ 100</span>
+        </div>
+      </div>
+
+      <div class="overall-info">
+        <h2>Overall SEO Score</h2>
+        <div class="check-url" id="result-url"></div>
+        <div class="page-title" id="result-title"></div>
+        <div style="margin-top:10px">
+          <span class="score-badge" id="score-badge"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI Insights -->
+    <div class="ai-section" id="ai-section" style="display:none">
+      <div class="ai-header">
+        <span class="ai-badge">✨ AI</span>
+        <h3>AI Insights — GPT-4o Analysis</h3>
+      </div>
+      <div class="ai-body" id="ai-body"></div>
+    </div>
+
+    <!-- Category cards -->
+    <div class="categories-grid" id="categories-grid"></div>
+
+    <!-- Priority issues -->
+    <div class="priority-section">
+      <div class="priority-header">
+        <h3>🚨 Top Issues to Fix</h3>
+        <span class="count-badge" id="issue-count">0</span>
+      </div>
+      <div id="priority-list"></div>
+    </div>
+
+    <!-- Detailed checks tabs -->
+    <div class="details-panel" style="margin-top:28px">
+      <div class="details-tabs" id="details-tabs"></div>
+      <div id="details-panels"></div>
+    </div>
+
+  </div>
+
+  <!-- Features (shown before first analysis) -->
+  <div id="features-section" class="features">
+    <h2>What gets analyzed</h2>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon">🏷️</div>
+        <h3>Meta Information</h3>
+        <p>Title, meta description, canonical, robots directives, Open Graph & Twitter Card tags.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📄</div>
+        <h3>Page Quality</h3>
+        <p>Headings structure, word count, image alt text, text/HTML ratio, paragraph structure.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🔗</div>
+        <h3>Page Structure</h3>
+        <p>URL format, depth, internal/external links, anchor text quality, link attributes.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">⚙️</div>
+        <h3>Server Config</h3>
+        <p>HTTPS, response time, HTTP status, redirects, robots.txt, sitemap, HSTS header.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📊</div>
+        <h3>External Signals</h3>
+        <p>JSON-LD schema markup, schema type, Open Graph completeness, Twitter Card, favicon.</p>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<script>
+  const CIRCUMFERENCE = 2 * Math.PI * 58; // 364.4
+
+  const CATEGORY_ORDER = [
+    "meta", "page_quality", "page_structure", "server", "external_signals", "performance"
+  ];
+
+  const CATEGORY_ICONS = {
+    meta:             "🏷️",
+    page_quality:     "📄",
+    page_structure:   "🔗",
+    server:           "⚙️",
+    external_signals: "📊",
+    performance:      "⚡",
+    ai_insights:      "✨",
+  };
+
+  let pollTimer = null;
+
+  // ── Kick off analysis ────────────────────────────────────────────────────
+  async function startAnalysis() {
+    const input = document.getElementById("url-input");
+    const errorEl = document.getElementById("error-msg");
+    let url = input.value.trim();
+
+    errorEl.textContent = "";
+
+    if (!url) {
+      errorEl.textContent = "Please enter a URL.";
+      input.focus();
+      return;
+    }
+
+    // Prepend https if missing
+    if (!/^https?:\/\//i.test(url)) url = "https://" + url;
+
+    showLoading(url);
+
+    try {
+      const resp = await fetch("/api/seo-check/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRFToken": getCookie("csrftoken"),
+        },
+        body: JSON.stringify({ url }),
+      });
+
+      const data = await resp.json();
+
+      if (!resp.ok) {
+        const msg = data.error || "Failed to start analysis.";
+        if (typeof msg === "object") {
+          showError(JSON.stringify(msg));
+        } else {
+          showError(msg);
+        }
+        return;
+      }
+
+      pollForResult(data.id);
+    } catch (e) {
+      showError("Network error: " + e.message);
+    }
+  }
+
+  // ── Poll until complete ──────────────────────────────────────────────────
+  async function pollForResult(checkId) {
+    let step = 0;
+    const steps = Array.from(document.querySelectorAll(".step-dot"));
+
+    pollTimer = setInterval(async () => {
+      // Animate loading steps
+      if (step < steps.length) {
+        if (step > 0) steps[step - 1].className = "step-dot done";
+        steps[step].className = "step-dot active";
+        step++;
+      }
+
+      try {
+        const resp = await fetch(`/api/seo-check/${checkId}/`);
+        const data = await resp.json();
+
+        if (data.status === "complete") {
+          clearInterval(pollTimer);
+          steps.forEach(s => s.className = "step-dot done");
+          setTimeout(() => renderResults(data), 300);
+        } else if (data.status === "failed") {
+          clearInterval(pollTimer);
+          showError(data.error_message || "Analysis failed. Please try again.");
+        }
+      } catch (e) {
+        clearInterval(pollTimer);
+        showError("Connection lost. Please try again.");
+      }
+    }, 1800);
+  }
+
+  // ── Render full results ──────────────────────────────────────────────────
+  function renderResults(data) {
+    hideLoading();
+    document.getElementById("features-section").style.display = "none";
+
+    const results = document.getElementById("results");
+    results.style.display = "block";
+
+    // Overall score
+    const score = data.overall_score || 0;
+    animateScore(score);
+    document.getElementById("result-url").textContent   = data.final_url || data.url;
+    document.getElementById("result-title").textContent = data.page_title
+      ? `"${data.page_title}"`
+      : "";
+
+    // Badge
+    const badge  = document.getElementById("score-badge");
+    if (score >= 80) {
+      badge.textContent = "Good";
+      badge.className   = "score-badge badge-good";
+    } else if (score >= 50) {
+      badge.textContent = "Needs Improvement";
+      badge.className   = "score-badge badge-warning";
+    } else {
+      badge.textContent = "Poor";
+      badge.className   = "score-badge badge-error";
+    }
+
+    // Sort categories to desired order (AI insights last, shown separately)
+    const allCats = [...(data.categories || [])];
+    const aiCat   = allCats.find(c => c.category === "ai_insights");
+    const cats    = allCats
+      .filter(c => c.category !== "ai_insights")
+      .sort((a, b) => CATEGORY_ORDER.indexOf(a.category) - CATEGORY_ORDER.indexOf(b.category));
+
+    renderAIInsights(data, aiCat);
+    renderCategoryCards(cats);
+    renderPriorityIssues(cats);
+    renderDetailTabs([...cats, ...(aiCat ? [aiCat] : [])]);
+  }
+
+  // ── AI Insights section ────────────────────────────────────────
+  function renderAIInsights(data, aiCat) {
+    const section = document.getElementById("ai-section");
+    const body    = document.getElementById("ai-body");
+
+    const summary  = data.ai_summary || "";
+    const sugg     = data.ai_suggestions || {};
+    const recs     = sugg.top_recommendations || [];
+    const verdict  = sugg.content_verdict || "";
+    const cScore   = sugg.content_quality_score;
+    const sugTitle = sugg.suggested_title || "";
+    const sugDesc  = sugg.suggested_meta_description || "";
+
+    if (!summary && recs.length === 0) {
+      section.style.display = "none";
+      return;
+    }
+
+    section.style.display = "block";
+
+    const cScoreColor = cScore >= 70 ? "var(--good)" : cScore >= 40 ? "var(--warn)" : "var(--error)";
+    const verdictLabel = (verdict || "").replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase());
+
+    let html = "";
+
+    if (summary) {
+      html += `<div class="ai-summary">${esc(summary)}</div>`;
+    }
+
+    if (cScore !== undefined && cScore !== null) {
+      html += `
+        <div class="ai-content-score">
+          <span style="color:var(--muted)">Content Quality:</span>
+          <span class="score-pill" style="background:${cScoreColor}22;color:${cScoreColor}">
+            ${cScore}/100
+          </span>
+          ${verdictLabel ? `<span style="color:var(--muted);font-size:.8rem">${esc(verdictLabel)}</span>` : ""}
+        </div>`;
+    }
+
+    if (sugTitle || sugDesc) {
+      html += `<div class="ai-suggestions-grid">`;
+      if (sugTitle) {
+        html += `
+          <div class="ai-suggestion-card">
+            <div class="ai-suggestion-label">&#128161; Suggested Title</div>
+            <div class="ai-suggestion-text">${esc(sugTitle)}</div>
+          </div>`;
+      }
+      if (sugDesc) {
+        html += `
+          <div class="ai-suggestion-card">
+            <div class="ai-suggestion-label">&#128161; Suggested Meta Description</div>
+            <div class="ai-suggestion-text">${esc(sugDesc)}</div>
+          </div>`;
+      }
+      html += `</div>`;
+    }
+
+    if (recs.length > 0) {
+      html += `<div class="ai-recs-title">AI Recommendations</div>`;
+      html += recs.map(rec => {
+        const impactCls = {
+          high:   "impact-high",
+          medium: "impact-medium",
+          low:    "impact-low",
+        }[(rec.expected_impact || "").toLowerCase()] || "impact-low";
+        return `
+          <div class="ai-rec-item">
+            <span class="ai-rec-area">${esc(rec.area || "")}</span>
+            <span class="ai-rec-badge ${impactCls}">${esc(rec.expected_impact || "")}</span>
+            <span class="ai-rec-text">${esc(rec.action || "")}</span>
+          </div>`;
+      }).join("");
+    }
+
+    body.innerHTML = html;
+  }
+
+  // ── Animate score gauge ──────────────────────────────────────────────────
+  function animateScore(targetScore) {
+    const circle  = document.getElementById("score-circle");
+    const numEl   = document.getElementById("score-number");
+    const color   = scoreColor(targetScore);
+    const offset  = CIRCUMFERENCE * (1 - targetScore / 100);
+
+    circle.style.stroke = color;
+    numEl.style.color   = color;
+
+    // Animate dash offset
+    setTimeout(() => {
+      circle.style.transition   = "stroke-dashoffset 1.2s cubic-bezier(.25,.8,.25,1)";
+      circle.style.strokeDashoffset = offset;
+    }, 50);
+
+    // Count up number
+    let current = 0;
+    const step  = Math.ceil(targetScore / 40);
+    const timer = setInterval(() => {
+      current = Math.min(current + step, targetScore);
+      numEl.textContent = current;
+      if (current >= targetScore) clearInterval(timer);
+    }, 30);
+  }
+
+  // ── Category score cards ─────────────────────────────────────────────────
+  function renderCategoryCards(cats) {
+    const grid = document.getElementById("categories-grid");
+    grid.innerHTML = "";
+
+    cats.forEach((cat, i) => {
+      const color = scoreColor(cat.score);
+      const div   = document.createElement("div");
+      div.className = "cat-card" + (i === 0 ? " active" : "");
+      div.dataset.category = cat.category;
+      div.innerHTML = `
+        <div class="cat-name">${CATEGORY_ICONS[cat.category] || "📌"} ${esc(cat.display_name)}</div>
+        <div class="cat-score-row">
+          <span class="cat-score-num" style="color:${color}">${cat.score}</span>
+          <span style="font-size:.7rem;color:var(--muted)">/ 100</span>
+        </div>
+        <div class="cat-bar-bg">
+          <div class="cat-bar-fill" style="width:0;background:${color}" data-width="${cat.score}%"></div>
+        </div>
+      `;
+      div.addEventListener("click", () => switchTab(cat.category, div));
+      grid.appendChild(div);
+
+      // Animate bar after paint
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          div.querySelector(".cat-bar-fill").style.width = cat.score + "%";
+        });
+      });
+    });
+  }
+
+  // ── Priority issues list ─────────────────────────────────────────────────
+  function renderPriorityIssues(cats) {
+    const issues = [];
+
+    cats.forEach(cat => {
+      (cat.checks_data || []).forEach(check => {
+        if ((check.status === "error" || check.status === "warning") && check.recommendation) {
+          issues.push({ ...check, cat_display: cat.display_name, category: cat.category });
+        }
+      });
+    });
+
+    // Errors first, then warnings; within each group sort by impact (max_points desc)
+    issues.sort((a, b) => {
+      if (a.status !== b.status) return a.status === "error" ? -1 : 1;
+      return (b.max_points || 0) - (a.max_points || 0);
+    });
+
+    document.getElementById("issue-count").textContent = issues.length;
+
+    const container = document.getElementById("priority-list");
+    if (issues.length === 0) {
+      container.innerHTML = `<div class="all-good-banner">✅ No critical issues found! Your page is well optimized.</div>`;
+      return;
+    }
+
+    container.innerHTML = issues.slice(0, 12).map((issue, i) => `
+      <div class="priority-item">
+        <div class="priority-num">${i + 1}</div>
+        <div>
+          <span class="priority-category">${esc(issue.cat_display)}</span>
+          <div class="priority-name">${esc(issue.name)}</div>
+          <div class="priority-rec">${esc(issue.recommendation)}</div>
+        </div>
+      </div>
+    `).join("");
+  }
+
+  // ── Detail tabs ──────────────────────────────────────────────────────────
+  function renderDetailTabs(cats) {
+    const tabsEl   = document.getElementById("details-tabs");
+    const panelsEl = document.getElementById("details-panels");
+    tabsEl.innerHTML   = "";
+    panelsEl.innerHTML = "";
+
+    cats.forEach((cat, i) => {
+      // Tab button
+      const btn = document.createElement("button");
+      btn.className   = "tab-btn" + (i === 0 ? " active" : "");
+      btn.textContent = `${CATEGORY_ICONS[cat.category] || ""} ${cat.display_name}`;
+      btn.dataset.tab = cat.category;
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+        document.querySelectorAll(".tab-content").forEach(p => p.classList.remove("active"));
+        btn.classList.add("active");
+        document.getElementById("panel-" + cat.category).classList.add("active");
+      });
+      tabsEl.appendChild(btn);
+
+      // Panel
+      const panel = document.createElement("div");
+      panel.id        = "panel-" + cat.category;
+      panel.className = "tab-content" + (i === 0 ? " active" : "");
+
+      const checks = cat.checks_data || [];
+      panel.innerHTML = `<div class="check-list">${checks.map(renderCheckRow).join("")}</div>`;
+      panelsEl.appendChild(panel);
+    });
+  }
+
+  function renderCheckRow(check) {
+    const iconMap = {
+      good:    { cls: "icon-good",    symbol: "✓" },
+      warning: { cls: "icon-warning", symbol: "!" },
+      error:   { cls: "icon-error",   symbol: "✗" },
+      info:    { cls: "icon-info",    symbol: "i" },
+    };
+    const icon = iconMap[check.status] || iconMap.info;
+    const pts  = check.max_points > 0
+      ? `${check.points}/${check.max_points} pts`
+      : "";
+
+    return `
+      <div class="check-row">
+        <div class="check-icon ${icon.cls}">${icon.symbol}</div>
+        <div class="check-body">
+          <div class="check-name">${esc(check.name)}</div>
+          <div class="check-description">${esc(check.description)}</div>
+          ${check.value ? `<span class="check-value">${esc(check.value)}</span>` : ""}
+          ${check.recommendation
+            ? `<div class="check-recommendation">💡 ${esc(check.recommendation)}</div>`
+            : ""}
+        </div>
+        <div class="check-points">${pts}</div>
+      </div>
+    `;
+  }
+
+  // ── Tab switch from category card ────────────────────────────────────────
+  function switchTab(category, cardEl) {
+    document.querySelectorAll(".cat-card").forEach(c => c.classList.remove("active"));
+    cardEl.classList.add("active");
+
+    document.querySelectorAll(".tab-btn").forEach(b => {
+      b.classList.toggle("active", b.dataset.tab === category);
+    });
+    document.querySelectorAll(".tab-content").forEach(p => {
+      p.classList.toggle("active", p.id === "panel-" + category);
+    });
+
+    document.querySelector(".details-panel").scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }
+
+  // ── UI state helpers ─────────────────────────────────────────────────────
+  function showLoading(url) {
+    document.getElementById("analyze-btn").disabled = true;
+    document.getElementById("results").style.display  = "none";
+    document.getElementById("loading").style.display  = "block";
+    document.getElementById("loading-url").textContent = url;
+    document.getElementById("error-msg").textContent   = "";
+    document.querySelectorAll(".step-dot").forEach(d => d.className = "step-dot");
+  }
+
+  function hideLoading() {
+    document.getElementById("loading").style.display  = "none";
+    document.getElementById("analyze-btn").disabled  = false;
+  }
+
+  function showError(msg) {
+    hideLoading();
+    document.getElementById("error-msg").textContent = msg;
+  }
+
+  // ── Utilities ────────────────────────────────────────────────────────────
+  function scoreColor(score) {
+    if (score >= 80) return "var(--good)";
+    if (score >= 50) return "var(--warn)";
+    return "var(--error)";
+  }
+
+  function esc(str) {
+    if (!str) return "";
+    return String(str)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  function getCookie(name) {
+    const match = document.cookie.match(new RegExp("(?:^|; )" + name + "=([^;]*)"));
+    return match ? decodeURIComponent(match[1]) : "";
+  }
+
+  // Allow Enter key in URL input
+  document.getElementById("url-input").addEventListener("keydown", e => {
+    if (e.key === "Enter") startAnalysis();
+  });
+</script>
+</body>
+</html>
