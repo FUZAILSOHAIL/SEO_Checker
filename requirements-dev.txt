@@ -1,0 +1,7 @@
+# Test and lint dependencies. Application runtime stays in requirements.txt.
+-r requirements.txt
+
+pytest==9.1.1
+pytest-django==4.14.0
+pytest-socket==0.8.1
+ruff==0.16.10

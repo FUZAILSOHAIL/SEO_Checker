@@ -38,3 +38,9 @@ Thumbs.db
 .idea/
 *.swp
 *.swo
+
+# Tests and tooling
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/

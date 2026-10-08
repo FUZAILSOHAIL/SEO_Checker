@@ -1,0 +1,22 @@
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+src = ["apps", "config", "tests"]
+extend-exclude = ["**/migrations"]
+
+[tool.ruff.lint]
+# Keep CI on correctness rules. A newer ruff's expanded default selection
+# (import sorting, bugbear, refactor) would fail the existing codebase
+# without changing behaviour, so the set is pinned here.
+select = ["E4", "E7", "E9", "F"]
+
+[tool.ruff.lint.per-file-ignores]
+"config/settings/*.py" = ["F403", "F405"]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings.test"
+testpaths = ["tests"]
+addopts = "-q --tb=short"
+filterwarnings = [
+    "ignore:The STATICFILES_STORAGE setting is deprecated:django.utils.deprecation.RemovedInDjango51Warning",
+]
