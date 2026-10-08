@@ -5,7 +5,6 @@ Checks: URL length, URL format (hyphens, depth, case), internal link count,
 external links, empty anchor text, nofollow usage.
 """
 from __future__ import annotations
-import re
 from urllib.parse import urlparse, urljoin
 from .base import BaseAnalyzer, CategoryResult, Check, Status
 
@@ -110,7 +109,6 @@ class PageStructureAnalyzer(BaseAnalyzer):
             ))
 
         # ── 5. Analyse all links ──────────────────────────────────────────
-        base_domain = f"{parsed.scheme}://{parsed.netloc}"
         all_links   = soup.find_all("a", href=True)
 
         internal_links = []
