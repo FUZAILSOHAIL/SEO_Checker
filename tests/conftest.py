@@ -3,8 +3,13 @@ import os
 import pytest
 
 # urllib3 probes AF_INET6 once, at import time, and catches failure.
-# Import it before tests disable sockets so that probe is not a test warning.
-import urllib3  # noqa: F401
+# It is not a direct dependency; when a local environment has it (via
+# requests), import it before tests disable sockets so that probe is
+# not reported as a test warning.
+try:
+    import urllib3  # noqa: F401
+except ModuleNotFoundError:
+    pass
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings.test")
 
