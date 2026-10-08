@@ -1,0 +1,78 @@
+# Local stack: Django web, Celery worker, Redis.
+# Copy .env.example to .env and fill in API keys before you rely on AI or PageSpeed.
+# DJANGO_SECRET_KEY's default is a local placeholder. Override it for any shared deploy.
+# SQLite lives on the shared volume so the three-service demo does not need Postgres.
+# Point DATABASE_URL at PostgreSQL and use config.settings.production for a real deploy.
+
+x-app-environment: &app-environment
+  DJANGO_SETTINGS_MODULE: config.settings.development
+  DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-dev-only-change-me-not-for-production}
+  DATABASE_URL: sqlite:////data/db.sqlite3
+  REDIS_URL: redis://redis:6379/0
+  ALLOWED_HOSTS: localhost,127.0.0.1,0.0.0.0
+  OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+  GOOGLE_PAGESPEED_API_KEY: ${GOOGLE_PAGESPEED_API_KEY:-}
+
+services:
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  web:
+    build: .
+    restart: unless-stopped
+    command: gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 1 --timeout 120
+    ports:
+      - "8080:8000"
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      <<: *app-environment
+      RUN_MIGRATIONS: "1"
+    volumes:
+      - app_data:/data
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/')",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+
+  celery:
+    build: .
+    restart: unless-stopped
+    # solo matches the Windows worker and avoids SQLite write locks from prefork.
+    command: celery -A config worker -Q seo_checks -l info --pool=solo
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      <<: *app-environment
+      RUN_MIGRATIONS: "0"
+    volumes:
+      - app_data:/data
+    depends_on:
+      redis:
+        condition: service_healthy
+      web:
+        condition: service_healthy
+
+volumes:
+  app_data:
