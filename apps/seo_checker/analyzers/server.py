@@ -121,7 +121,7 @@ class ServerAnalyzer(BaseAnalyzer):
             ))
 
         # ── 5. robots.txt ─────────────────────────────────────────────────
-        robots_ok, robots_msg = _check_url_accessible(f"{base_origin}/robots.txt")
+        robots_ok, _ = _check_url_accessible(f"{base_origin}/robots.txt")
         if robots_ok:
             checks.append(Check(
                 id="robots_txt", name="robots.txt",

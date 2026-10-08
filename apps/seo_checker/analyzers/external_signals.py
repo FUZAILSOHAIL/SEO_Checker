@@ -6,7 +6,6 @@ Twitter Card completeness, favicon.
 """
 from __future__ import annotations
 import json
-from urllib.parse import urljoin
 from .base import BaseAnalyzer, CategoryResult, Check, Status
 
 KNOWN_SCHEMA_TYPES = {
@@ -24,7 +23,6 @@ class ExternalSignalsAnalyzer(BaseAnalyzer):
 
     def analyze(self, page_data: dict) -> CategoryResult:
         soup = page_data["soup"]
-        url  = page_data["final_url"] or page_data["url"]
         checks: list[Check] = []
 
         # ── 1. JSON-LD Schema Markup ──────────────────────────────────────
