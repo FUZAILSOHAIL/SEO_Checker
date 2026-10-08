@@ -238,37 +238,58 @@ Submit a URL for analysis.
 { "url": "https://example.com" }
 ```
 
-**Response** `202 Accepted`
+**Response** `201 Created`
+
+The handler stores the row and enqueues Celery. It returns only the new id and the initial status (`pending`). The URL and score are on the poll response, after the worker finishes.
+
 ```json
 {
   "id": "uuid",
-  "url": "https://example.com",
-  "status": "pending",
-  "overall_score": null
+  "status": "pending"
 }
 ```
 
 ### `GET /api/seo-check/<id>/`
 
-Poll for results.
+Poll for results. `status` is `pending`, `running`, `complete`, or `failed`.
 
-**Response** `200 OK` (when complete)
+**Response** `200 OK` (when `status` is `complete`)
 ```json
 {
   "id": "uuid",
   "url": "https://example.com",
   "final_url": "https://example.com/",
-  "status": "done",
+  "status": "complete",
   "overall_score": 84,
+  "page_title": "Example Domain",
   "ai_summary": "...",
-  "ai_suggestions": { ... },
+  "ai_suggestions": {
+    "content_quality_score": 82,
+    "content_verdict": "good",
+    "suggested_title": "",
+    "suggested_meta_description": "",
+    "top_recommendations": []
+  },
+  "error_message": "",
+  "created_at": "2026-05-21T21:06:00Z",
+  "completed_at": "2026-05-21T21:06:12Z",
   "categories": [
     {
       "category": "meta",
       "display_name": "Meta Information",
       "score": 91,
-      "weight": 0.25,
-      "checks": [ ... ]
+      "checks_data": [
+        {
+          "id": "title_present",
+          "name": "Title Tag",
+          "status": "good",
+          "value": "Example Domain",
+          "description": "Title tag is present.",
+          "recommendation": "",
+          "points": 15,
+          "max_points": 15
+        }
+      ]
     }
   ]
 }
